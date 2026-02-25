@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>मेधावी परीक्षा - बस्ती मंडल न्यूज़</title>
+    <style>
+        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+        body { font-family: 'Arial', sans-serif; background: #000; margin: 0; display: flex; justify-content: center; min-height: 100vh; color: #fff; }
+        #exam-container { max-width: 450px; width: 100%; background: #111; min-height: 100vh; position: relative; border: 1px solid #333; }
+        #timer-header { position: sticky; top: 0; background: #000; z-index: 1000; padding: 15px; border-bottom: 4px solid #f00; text-align: center; }
+        #timer-text { font-size: 50px; font-weight: 900; color: #f00; font-family: 'Courier New', monospace; }
+        .blink { animation: blinker 0.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+        .content { padding: 25px; }
+        .q-text { font-size: 20px; font-weight: 700; line-height: 1.4; margin-bottom: 25px; color: #eee; }
+        .opt-btn { background: #222; color: #ccc; border: 1px solid #444; margin-bottom: 12px; padding: 18px; width: 100%; border-radius: 10px; font-size: 16px; text-align: left; cursor: pointer; }
+        .opt-btn:active { background: #fff; color: #000; }
+        #start-screen { text-align: center; padding-top: 30px; }
+        input { width: 100%; padding: 15px; margin-bottom: 15px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 16px; text-align: center; }
+        .btn-start { width: 100%; padding: 20px; background: #f00; color: #fff; border: none; border-radius: 8px; font-size: 22px; font-weight: 900; cursor: pointer; }
+        #certificate { display: none; text-align: center; padding: 30px; background: #fff; color: #000; min-height: 100vh; border: 15px double #1e293b; }
+    </style>
+</head>
+<body>
+
+<div id="exam-container">
+    <div id="timer-header" style="display:none;">
+        <div id="timer-text">60</div>
+    </div>
+
+    <div class="content">
+        <div id="start-screen">
+            <h1 style="color:#f00;">बस्ती मंडल न्यूज़</h1>
+            <p>मेधावी चयन परीक्षा - 2026</p>
+            <input type="text" id="user-name" placeholder="नाम + कोड (e.g. अमित +91)">
+            <input type="text" id="user-school" placeholder="विद्यालय का पूरा नाम">
+            <button class="btn-start" onclick="startQuiz()">शुरू करें</button>
+        </div>
+
+        <div id="quiz-screen" style="display:none;">
+            <div id="q-count" style="color:#f00; font-weight:bold; margin-bottom:10px; text-align:right;"></div>
+            <div class="q-text" id="q-display"></div>
+            <div id="options-display"></div>
+        </div>
+
+        <div id="certificate">
+            <h2>मेधावी प्रमाण पत्र</h2>
+            <p>प्रमाणित किया जाता है कि</p>
+            <h1 id="res-name"></h1>
+            <p>विद्यालय: <strong id="res-school"></strong></p>
+            <p style="font-size:24px;">स्कोर: <span id="res-score" style="color:red; font-weight:900;"></span> / 30</p>
+            <button onclick="window.print()" style="margin-top:40px; padding:12px; background:#000; color:#fff; width:100%;">डाउनलोड करें</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SECRET_CODE = "++"; 
+
+    // अब यहाँ पूरे 30 सवाल हैं
+    const allQuestions = [
+        {q: "1. एक मेज पर 5 सेब हैं, आपने 3 उठा लिए। अब आपके पास कितने सेब हैं?", a: ["2", "3", "5", "0"], c: 1},
+        {q: "2. 80 में से 8 को कितनी बार घटाया जा सकता है?", a: ["10 बार", "1 बार", "9 बार", "अनंत"], c: 1},
+        {q: "3. 10 + 10 x 0 + 10 का मान क्या होगा?", a: ["20", "10", "0", "30"], c: 0},
+        {q: "4. शतरंज के बोर्ड में कुल कितने 'वर्ग' (Squares) होते हैं?", a: ["64", "204", "100", "144"], c: 1},
+        {q: "5. बस्ती की 'छावनी' में किस शहीद को अंग्रेजों ने सबसे पहले फांसी दी थी?", a: ["शहीद पंचम सिंह", "राजा जालिम सिंह", "शहीद राजा अमोढ़ा", "अज्ञात"], c: 0},
+        {q: "6. एक तालाब में कमल का फूल हर दिन दोगुना होता है। 20 दिन में पूरा भरा, तो आधा कब भरा था?", a: ["10 दिन", "19 दिन", "15 दिन", "18 दिन"], c: 1},
+        {q: "7. A, B की माँ है, पर B उसका बेटा नहीं है। B का A से क्या रिश्ता है?", a: ["बेटी", "भतीजा", "भाई", "पिता"], c: 0},
+        {q: "8. 0.1 x 0.1 का मान क्या होगा?", a: ["0.1", "0.01", "1.0", "0.001"], c: 1},
+        {q: "9. बस्ती जिला किस वर्ष में स्थापित हुआ था?", a: ["1865", "1991", "1947", "1857"], c: 0},
+        {q: "10. अगर 3 मुर्गियां 3 दिन में 3 अंडे देती हैं, तो 300 मुर्गियां 300 दिन में कितने अंडे देंगी?", a: ["300", "900", "30000", "3000"], c: 2},
+        {q: "11. मनुष्य की आंख का वजन लगभग कितना होता है?", a: ["8 ग्राम", "15 ग्राम", "25 ग्राम", "5 ग्राम"], c: 0},
+        {q: "12. भारत के किस राज्य में 'काला नमक चावल' महोत्सव मनाया जाता है?", a: ["बस्ती", "सिद्धार्थनगर", "संतकबीरनगर", "लखनऊ"], c: 1},
+        {q: "13. ATM का पिन (PIN) आमतौर पर कितने अंकों का होता है?", a: ["4", "6", "4 या 6 दोनों", "8"], c: 2},
+        {q: "14. 2 + 2 / 2 का मान क्या है?", a: ["2", "3", "4", "1"], c: 1},
+        {q: "15. 'गूगल' (Google) किस देश की कंपनी है?", a: ["चीन", "भारत", "अमेरिका", "जापान"], c: 2},
+        {q: "16. बस्ती मंडल में कुल कितने जिले हैं?", a: ["2", "3", "4", "5"], c: 1},
+        {q: "17. 'मखौड़ा धाम' किस नदी के किनारे स्थित है?", a: ["कुआनो", "आमी", "सरयू", "मनोरमा"], c: 3},
+        {q: "18. इंटरनेट पर 'WWW' का पूर्ण रूप क्या है?", a: ["World Wide Web", "World Whole Web", "Web World Wide", "कोई नहीं"], c: 0},
+        {q: "19. भारत का संविधान कब लागू हुआ था?", a: ["15 अगस्त", "26 जनवरी", "2 अक्टूबर", "26 नवंबर"], c: 1},
+        {q: "20. सौरमंडल का सबसे बड़ा ग्रह कौन सा है?", a: ["पृथ्वी", "शुक्र", "बृहस्पति", "मंगल"], c: 2},
+        {q: "21. मनुष्य के शरीर में कुल कितनी हड्डियां होती हैं?", a: ["201", "206", "210", "208"], c: 1},
+        {q: "22. विटामिन C की कमी से कौन सा रोग होता है?", a: ["बेरी-बेरी", "रतौंधी", "स्कर्वी", "रिकेट्स"], c: 2},
+        {q: "23. एक लीप वर्ष में कुल कितने दिन होते हैं?", a: ["365", "366", "364", "360"], c: 1},
+        {q: "24. भारत की प्रथम महिला प्रधानमंत्री कौन थी?", a: ["प्रतिभा पाटिल", "सरोजिनी नायडू", "इंदिरा गांधी", "सुषमा स्वराज"], c: 2},
+        {q: "25. शून्य (0) का आविष्कार किसने किया था?", a: ["न्यूटन", "आर्यभट्ट", "आइंस्टीन", "गैलीलियो"], c: 1},
+        {q: "26. विश्व का सबसे बड़ा महासागर कौन सा है?", a: ["हिंद महासागर", "अटलांटिक", "प्रशांत महासागर", "आर्कटिक"], c: 2},
+        {q: "27. बस्ती जिले का आरटीओ (RTO) कोड क्या है?", a: ["UP-51", "UP-52", "UP-53", "UP-50"], c: 0},
+        {q: "28. फेसबुक (Facebook) के संस्थापक कौन हैं?", a: ["बिल गेट्स", "मार्क जुकरबर्ग", "एलोन मस्क", "रतन टाटा"], c: 1},
+        {q: "29. भारत का राष्ट्रीय खेल कौन सा है?", a: ["क्रिकेट", "फुटबॉल", "हॉकी", "कबड्डी"], c: 2},
+        {q: "30. 100 के नोट पर कितनी भाषाएं लिखी होती हैं?", a: ["15", "17", "10", "20"], c: 1}
+    ];
+
+    let currentIdx = 0, score = 0, timer, sec = 60, shuffledQuestions = [];
+
+    function startQuiz() {
+        const fullName = document.getElementById('user-name').value.trim();
+        const school = document.getElementById('user-school').value.trim();
+        if(!fullName.includes(SECRET_CODE)) return alert("गलत एक्सेस कोड!");
+        if(school.length < 3) return alert("स्कूल का नाम भरें!");
+
+        shuffledQuestions = allQuestions.sort(() => 0.5 - Math.random());
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('timer-header').style.display = 'block';
+        document.getElementById('quiz-screen').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if(currentIdx >= shuffledQuestions.length) return finish();
+        document.getElementById('q-count').innerText = `सवाल: ${currentIdx+1}/30`;
+        document.getElementById('q-display').innerText = shuffledQuestions[currentIdx].q;
+        let optionsHtml = "";
+        shuffledQuestions[currentIdx].a.forEach((opt, i) => {
+            optionsHtml += `<button class="opt-btn" onclick="handleAnswer(${i})">${opt}</button>`;
+        });
+        document.getElementById('options-display').innerHTML = optionsHtml;
+        sec = 60;
+        startTimer();
+    }
+
+    function startTimer() {
+        clearInterval(timer);
+        timer = setInterval(() => {
+            sec--;
+            const timerEl = document.getElementById('timer-text');
+            timerEl.innerText = sec < 10 ? "0"+sec : sec;
+            if(sec <= 10) timerEl.classList.add('blink');
+            else timerEl.classList.remove('blink');
+            if(sec <= 0) { currentIdx++; loadQuestion(); }
+        }, 1000);
+    }
+
+    function handleAnswer(i) {
+        if(i === shuffledQuestions[currentIdx].c) score++;
+        currentIdx++;
+        loadQuestion();
+    }
+
+    function finish() {
+        clearInterval(timer);
+        document.getElementById('timer-header').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('certificate').style.display = 'block';
+        let finalName = document.getElementById('user-name').value.replace(SECRET_CODE, "").trim();
+        document.getElementById('res-name').innerText = finalName;
+        document.getElementById('res-school').innerText = document.getElementById('user-school').value;
+        document.getElementById('res-score').innerText = score;
+    }
+</script>
+</body>
+</html>
